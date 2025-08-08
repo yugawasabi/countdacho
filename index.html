@@ -263,7 +263,7 @@
         const minutes = Math.floor((remaining / (1000 * 60)) % 60);
         const seconds = Math.floor((remaining / 1000) % 60);
 
-        countdownEl.innerHTML = `${title}まで残り ${days}日 ${hours}時間 ${minutes}分 ${seconds}秒`;
+        countdownEl.innerHTML = `${title}まで残り<br> ${days}日 ${hours}時間 ${minutes}分 ${seconds}秒`;
 
         const percentElapsed = ((totalDuration - remaining) / totalDuration) * 100;
         updateProgress(percentElapsed);
