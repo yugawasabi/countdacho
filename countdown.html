@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>カウントダウン</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+
+    :root {
+      --bg-color: #121212;
+      --text-color: #e0e0e0;
+      --accent-color: #1a73e8;
+      --input-bg: #1f1f1f;
+      --input-border: #333;
+      --button-bg: var(--accent-color);
+      --button-hover-bg: #155ab6;
+      --button-text-color: white;
+      --reset-button-bg: #444;
+      --reset-button-hover-bg: #666;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 2rem 1rem;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    h1 {
+      font-weight: 600;
+      font-size: 2rem;
+      margin: 0;
+    }
+
+    #countdown {
+      font-size: 2rem;
+      font-weight: 600;
+      text-align: center;
+      min-height: 3rem;
+      line-height: 1.4;
+      margin-top: 1rem;
+    }
+
+    #progress-container {
+      width: 100%;
+      max-width: 600px;
+      height: 16px;
+      background-color: #333;
+      border-radius: 8px;
+      margin: 1.5rem 0;
+      overflow: hidden;
+      position: relative;
+    }
+
+    #progress-bar {
+      height: 100%;
+      background-color: var(--accent-color);
+      width: 100%;
+      transition: width 1s linear;
+    }
+
+    #runner {
+      position: absolute;
+      top: calc(50% - 160px);
+      left: 0;
+      margin-left: -60px;
+      width: 130px;
+      height: auto;
+      pointer-events: none;
+      user-select: none;
+      transition: left 1s linear;
+      z-index: 10;
+    }
+
+    form {
+      width: 100%;
+      max-width: 400px;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    input[type="text"],
+    input[type="datetime-local"] {
+      background-color: var(--input-bg);
+      border: 1.5px solid var(--input-border);
+      border-radius: 6px;
+      color: var(--text-color);
+      font-size: 1rem;
+      padding: 0.75rem 1rem;
+      transition: border-color 0.3s ease;
+      outline-offset: 2px;
+    }
+
+    input[type="text"]:focus,
+    input[type="datetime-local"]:focus {
+      border-color: var(--accent-color);
+      outline: none;
+    }
+
+    #buttons {
+      display: flex;
+      gap: 1rem;
+    }
+
+    button {
+      flex: 1;
+      font-weight: 600;
+      padding: 0.75rem 0;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    button[type="submit"] {
+      background-color: var(--button-bg);
+      color: var(--button-text-color);
+    }
+
+    button[type="submit"]:hover {
+      background-color: var(--button-hover-bg);
+    }
+
+    #reset-btn {
+      background-color: var(--reset-button-bg);
+      color: var(--text-color);
+    }
+
+    #reset-btn:hover {
+      background-color: var(--reset-button-hover-bg);
+    }
+
+    input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+      filter: brightness(0) invert(1);
+      cursor: pointer;
+    }
+
+    @media (max-width: 480px) {
+      #countdown {
+        font-size: 1.4rem;
+        line-height: 1.6;
+      }
+
+      form {
+        max-width: 100%;
+      }
+
+      #runner {
+        width: 60px;
+        top: calc(50% - 100px);
+        margin-left: -30px;
+      }
+
+      #progress-container {
+        height: 12px;
+      }
+
+      input[type="text"],
+      input[type="datetime-local"] {
+        font-size: 0.9rem;
+        padding: 0.6rem 0.8rem;
+      }
+
+      button {
+        padding: 0.6rem 0;
+        font-size: 0.9rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="countdown">目標日時をセットしてください</div>
+
+  <div id="progress-container">
+    <div id="progress-bar"></div>
+  </div>
+
+  <!-- ランナーGIF（バーの外側） -->
+  <img id="runner" src="https://cdn.pixabay.com/animation/2024/09/11/14/50/14-50-57-604_512.gif" alt="Runner" />
+
+  <form id="countdown-form" autocomplete="off">
+    <input type="text" id="target-title" placeholder="例: 年末まで" required />
+    <input type="datetime-local" id="target-date" required />
+    <div id="buttons">
+      <button type="submit">セット</button>
+      <button type="button" id="reset-btn">リセット</button>
+    </div>
+  </form>
+
+  <script>
+    const countdownEl = document.getElementById('countdown');
+    const form = document.getElementById('countdown-form');
+    const titleInput = document.getElementById('target-title');
+    const dateInput = document.getElementById('target-date');
+    const progressBar = document.getElementById('progress-bar');
+    const progressContainer = document.getElementById('progress-container');
+    const runner = document.getElementById('runner');
+
+    let countdownInterval = null;
+    let totalDuration = 0;
+
+    function saveToLocalStorage(title, dateString) {
+      localStorage.setItem('countdownTitle', title);
+      localStorage.setItem('countdownDate', dateString);
+    }
+
+    function clearLocalStorage() {
+      localStorage.removeItem('countdownTitle');
+      localStorage.removeItem('countdownDate');
+    }
+
+    function updateProgress(percent) {
+      progressBar.style.width = percent + '%';
+
+      const containerRect = progressContainer.getBoundingClientRect();
+      const runnerWidth = runner.offsetWidth;
+      const maxLeft = containerRect.width - runnerWidth;
+
+      let runnerLeft = (percent / 100) * containerRect.width - (runnerWidth / 2);
+      runnerLeft = Math.max(0, Math.min(runnerLeft, maxLeft));
+
+      const scrollLeft = window.pageXOffset;
+      const containerLeft = containerRect.left + scrollLeft;
+
+      runner.style.left = containerLeft + runnerLeft + 'px';
+      runner.style.display = 'block';
+    }
+
+    function startCountdown(title, targetTime) {
+      clearInterval(countdownInterval);
+      const startTime = new Date();
+      totalDuration = targetTime - startTime;
+
+      countdownInterval = setInterval(() => {
+        const now = new Date();
+        const remaining = targetTime - now;
+
+        if (remaining <= 0) {
+          countdownEl.innerHTML = `${title}まで残り<br>0日 0時間 0分 0秒（終了）`;
+          updateProgress(100);
+          clearInterval(countdownInterval);
+          return;
+        }
+
+        const days = Math.floor(remaining / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((remaining / (1000 * 60 * 60)) % 24);
+        const minutes = Math.floor((remaining / (1000 * 60)) % 60);
+        const seconds = Math.floor((remaining / 1000) % 60);
+
+        countdownEl.innerHTML = `${title}まで残り ${days}日 ${hours}時間 ${minutes}分 ${seconds}秒`;
+
+        const percentElapsed = ((totalDuration - remaining) / totalDuration) * 100;
+        updateProgress(percentElapsed);
+      }, 1000);
+    }
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      const title = titleInput.value.trim();
+      const dateStr = dateInput.value;
+
+      if (!title || !dateStr) return;
+
+      const targetDate = new Date(dateStr);
+      if (isNaN(targetDate)) {
+        alert("有効な日付を入力してください。");
+        return;
+      }
+
+      saveToLocalStorage(title, dateStr);
+      startCountdown(title, targetDate);
+    });
+
+    document.getElementById('reset-btn').addEventListener('click', () => {
+      clearInterval(countdownInterval);
+      clearLocalStorage();
+      countdownEl.textContent = "目標日時をセットしてください";
+      titleInput.value = '';
+      dateInput.value = '';
+      progressBar.style.width = '100%';
+      updateProgress(0);
+    });
+
+    window.addEventListener('load', () => {
+      updateProgress(0); // 初期位置に runner を表示
+      const savedTitle = localStorage.getItem('countdownTitle');
+      const savedDate = localStorage.getItem('countdownDate');
+
+      if (savedTitle && savedDate) {
+        const targetDate = new Date(savedDate);
+        if (!isNaN(targetDate)) {
+          titleInput.value = savedTitle;
+          dateInput.value = savedDate;
+          startCountdown(savedTitle, targetDate);
+        }
+      }
+    });
+  </script>
+</body>
+</html>
